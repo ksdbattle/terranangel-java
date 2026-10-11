@@ -1,0 +1,19 @@
+# Consumer 应用配置：独立的服务消费方，端口 8081
+server:
+  port: 8081
+
+spring:
+  application:
+    name: terranangel-demo-consumer
+  # 关闭 Spring Cloud 兼容性检查（Spring Boot 4.1.0 + Spring Cloud 2025.1）
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    # 注册中心：Consul
+    consul:
+      host: 127.0.0.1     # Consul 服务端地址
+      port: 10002         # Consul 服务端端口
+      discovery:
+        # 注册到 Consul，用 IP 而不是主机名（避免 terranangel 解析失败）
+        prefer-ip-address: true
+        instance-id: ${spring.application.name}

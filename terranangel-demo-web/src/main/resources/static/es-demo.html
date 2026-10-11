@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Elasticsearch 演示 - TerranAngel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            padding: 30px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 {
+            font-size: 24px; margin-bottom: 8px; color: #1a1a1a;
+        }
+        .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
+        .card {
+            background: #fff; border-radius: 10px; padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 15px; color: #555; margin-bottom: 14px;
+            font-weight: 600; letter-spacing: .5px;
+        }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        button {
+            padding: 9px 18px; border: none; border-radius: 6px;
+            font-size: 14px; cursor: pointer; transition: all .15s;
+            font-family: inherit;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.12); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+        .btn-primary { background: #1677ff; color: #fff; }
+        .btn-success { background: #52c41a; color: #fff; }
+        .btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+        .btn-danger { background: #ff4d4f; color: #fff; }
+        input[type=text], input[type=number] {
+            padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+            font-size: 14px; font-family: inherit; outline: none;
+        }
+        input:focus { border-color: #1677ff; }
+        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .status {
+            margin-top: 14px; padding: 10px 14px; border-radius: 6px;
+            font-size: 13px; display: none;
+        }
+        .status.show { display: block; }
+        .status.ok { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
+        .status.err { background: #fff2f0; border: 1px solid #ffccc7; color: #cf1322; }
+        .status.loading { background: #e6f4ff; border: 1px solid #91caff; color: #0958d9; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { background: #fafafa; font-weight: 600; color: #666; font-size: 13px; }
+        tr:hover td { background: #fafcff; }
+        .tag {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 12px; background: #e6f4ff; color: #0958d9;
+        }
+        .empty { text-align: center; color: #bbb; padding: 30px 0; font-size: 14px; }
+        .price { color: #ff4d4f; font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Elasticsearch 演示</h1>
+    <div class="subtitle">TerranAngel · Spring Data Elasticsearch · 点击按钮体验文档存储与全文检索</div>
+
+    <!-- 初始化数据 -->
+    <div class="card">
+        <h2>① 准备数据</h2>
+        <div class="btn-group">
+            <button class="btn-success" onclick="initData()">初始化演示数据（5 条商品）</button>
+            <button class="btn-danger" onclick="clearCache()">清空列表</button>
+        </div>
+    </div>
+
+    <!-- 查询操作 -->
+    <div class="card">
+        <h2>② 查询 / 搜索</h2>
+        <div class="row" style="margin-bottom:12px;">
+            <button class="btn-primary" onclick="listAll()">查询全部</button>
+        </div>
+        <div class="row" style="margin-bottom:10px;">
+            <input type="text" id="keyword" placeholder="关键字搜索（如 iPhone）" style="width:260px;">
+            <button class="btn-primary" onclick="search()">分词搜索</button>
+        </div>
+        <div class="row" style="margin-bottom:10px;">
+            <input type="text" id="brand" placeholder="品牌（如 Apple）" style="width:180px;">
+            <button class="btn-primary" onclick="searchBrand()">按品牌精确查</button>
+        </div>
+        <div class="row">
+            <input type="number" id="minPrice" placeholder="最低价" style="width:120px;">
+            <span style="color:#999;">~</span>
+            <input type="number" id="maxPrice" placeholder="最高价" style="width:120px;">
+            <button class="btn-primary" onclick="searchPrice()">按价格区间查</button>
+        </div>
+        <div class="status" id="status"></div>
+    </div>
+
+    <!-- 结果 -->
+    <div class="card">
+        <h2>③ 结果</h2>
+        <div id="result">
+            <div class="empty">暂无数据，先点上方"初始化演示数据"</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = '/es/product';
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = 'status show ' + type;
+    }
+
+    function render(list) {
+        const box = document.getElementById('result');
+        if (!list || list.length === 0) {
+            box.innerHTML = '<div class="empty">没有查到数据</div>';
+            return;
+        }
+        let html = '<table><thead><tr>' +
+            '<th>ID</th><th>商品名</th><th>描述</th><th>品牌</th><th>价格</th><th>库存</th>' +
+            '</tr></thead><tbody>';
+        list.forEach(p => {
+            html += '<tr>' +
+                '<td>' + (p.id ?? '') + '</td>' +
+                '<td>' + (p.name ?? '') + '</td>' +
+                '<td>' + (p.description ?? '') + '</td>' +
+                '<td><span class="tag">' + (p.brand ?? '') + '</span></td>' +
+                '<td class="price">￥' + (p.price ?? '') + '</td>' +
+                '<td>' + (p.stock ?? '') + '</td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        box.innerHTML = html;
+    }
+
+    // 统一请求封装
+    async function request(url, options) {
+        try {
+            const resp = await fetch(url, options);
+            if (!resp.ok) {
+                throw new Error('HTTP ' + resp.status + ' ' + resp.statusText);
+            }
+            const ct = resp.headers.get('content-type') || '';
+            return ct.includes('json') ? await resp.json() : await resp.text();
+        } catch (e) {
+            showStatus('请求失败：' + e.message + '（确认后端已启动、ES 已连接）', 'err');
+            throw e;
+        }
+    }
+
+    // 初始化数据
+    async function initData() {
+        showStatus('正在初始化数据...', 'loading');
+        try {
+            const msg = await request(API + '/init', { method: 'POST' });
+            showStatus('✓ ' + msg, 'ok');
+            await listAll();
+        } catch (e) { /* 已在 request 里提示 */ }
+    }
+
+    // 查询全部
+    async function listAll() {
+        showStatus('查询中...', 'loading');
+        try {
+            const data = await request(API + '/all');
+            render(data);
+            showStatus('✓ 共 ' + data.length + ' 条', 'ok');
+        } catch (e) { }
+    }
+
+    // 关键字搜索
+    async function search() {
+        const kw = document.getElementById('keyword').value.trim();
+        if (!kw) { showStatus('请输入搜索关键字', 'err'); return; }
+        showStatus('搜索中...', 'loading');
+        try {
+            const data = await request(API + '/search?keyword=' + encodeURIComponent(kw));
+            render(data);
+            showStatus('✓ 关键字「' + kw + '」匹配到 ' + data.length + ' 条', 'ok');
+        } catch (e) { }
+    }
+
+    // 按品牌查
+    async function searchBrand() {
+        const b = document.getElementById('brand').value.trim();
+        if (!b) { showStatus('请输入品牌', 'err'); return; }
+        showStatus('查询中...', 'loading');
+        try {
+            const data = await request(API + '/brand/' + encodeURIComponent(b));
+            render(data);
+            showStatus('✓ 品牌「' + b + '」共 ' + data.length + ' 条', 'ok');
+        } catch (e) { }
+    }
+
+    // 按价格区间查
+    async function searchPrice() {
+        const min = document.getElementById('minPrice').value;
+        const max = document.getElementById('maxPrice').value;
+        if (!min || !max) { showStatus('请填写最低价和最高价', 'err'); return; }
+        showStatus('查询中...', 'loading');
+        try {
+            const data = await request(API + '/price?min=' + min + '&max=' + max);
+            render(data);
+            showStatus('✓ 价格 ' + min + ' ~ ' + max + ' 共 ' + data.length + ' 条', 'ok');
+        } catch (e) { }
+    }
+
+    // 清空列表
+    function clearCache() {
+        document.getElementById('result').innerHTML = '<div class="empty">暂无数据，先点上方"初始化演示数据"</div>';
+        showStatus('已清空列表显示', 'ok');
+    }
+</script>
+</body>
+</html>

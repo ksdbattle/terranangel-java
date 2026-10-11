@@ -1,0 +1,91 @@
+# TerranAngel 示例配置——默认是"最简启动"。
+
+# ===== 能力开关（terranangel 前缀）=====
+# 配了 enabled: true 才启用对应能力，没配则完全不初始化，Spring 照常启动。
+terranangel:
+  # gRPC 开关
+  grpc:
+    enabled: false
+  # OpenFeign 开关
+  feign:
+    enabled: false
+    url: http://127.0.0.1:8080
+  # Kafka 开关（默认关闭）
+  kafka:
+    enabled: false        # false 时不加载 Kafka 消费，应用照常启动
+    # 本地没启动 Kafka，这里不配 bootstrap-servers
+    # bootstrap-servers: 127.0.0.1:9092
+  # ===== 数据访问开关（默认全关：不配置不连库，应用照常启动）=====
+  # 两个数据源完全独立，各配一套，可以同时开启。
+  # 业务上没有交集，所以不存在跨库事务问题。
+  datasource:
+    # JPA（Hibernate）→ PostgreSQL
+    postgres:
+      enabled: false       # true 才启用
+      url: jdbc:postgresql://127.0.0.1:5432/postgres
+      username: postgres
+      password: postgres
+      max-pool-size: 10
+      generate-ddl: true  # 自动建表（演示用，生产建议关）
+    # MyBatis-Plus → MySQL
+    mysql:
+      enabled: false       # true 才启用
+      url: jdbc:mysql://127.0.0.1:3306/terranangel?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: root
+      password: 123456
+      max-pool-size: 10
+  # 缓存开关（默认关闭：不配置不初始化，应用照常启动）
+  # Caffeine（本地）与 Redis（分布式）各自独立，业务方法上用 cacheManager 指定用哪个；
+  # 不指定时走默认的 redisCacheManager（见 RedisCacheConfig 的 @Primary）。
+  cache:
+    enabled: false        # true 才启用 Spring Cache
+    ttl-seconds: 3600     # 默认过期时间（秒）
+    max-size: 1000        # Caffeine 最大条目数
+    redis:
+      host: 127.0.0.1
+      port: 6379
+  # Elasticsearch 开关（默认关闭：不配置不初始化，应用照常启动）
+  es:
+    enabled: false         # true 才启用 Elasticsearch
+    uris: https://localhost:9200    # ES 8+ 默认开 HTTPS
+    # ES 8+ 默认开启安全认证，填首次启动时生成的密码
+    username: elastic
+    password: Xxl+51vt0_KmTX=E2ccY
+
+spring:
+  application:
+    name: terranangel-demo-web     # 服务名，注册到注册中心时用
+  # 关闭 Spring Cloud 兼容性检查：
+  # Spring Cloud 2025.1 官方只支持 Spring Boot 4.0.x，而本项目用 4.1.0，
+  # 检查器会阻止启动。关闭后让它在 4.1.0 上运行（4.1 与 4.0 差异小，实测可跑）。
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    # 注册中心：Consul（默认关闭，不用就不初始化、不刷日志）
+    consul:
+      host: 127.0.0.1     # Consul 服务端地址
+      port: 10002         # Consul 服务端端口
+      discovery:
+        # 注册中心开关：false 时整个 Consul 发现功能关闭（不注册、不查询、不刷日志）
+        enabled: false
+        # 关键：关闭 ConsulCatalogWatch 定时查询任务（这才是刷 ERROR 日志的源头）
+        catalog-services-watch:
+          enabled: false
+        # 注册到 Consul，用 IP 而不是主机名（避免 terranangel 解析失败）
+        prefer-ip-address: true
+        instance-id: ${spring.application.name}
+        # 注册开关：跟随 enabled，默认不注册
+        register: false
+  grpc:
+    server:
+      port: 9090          # gRPC 服务端端口
+    client:
+      channels:
+        hello:
+          address: 127.0.0.1:9090   # 客户端连接的 gRPC 服务地址
+
+# Actuator 健康检查：不检查 Consul（Consul 按需加载，没启用就不该影响健康状态）
+management:
+  health:
+    consul:
+      enabled: false

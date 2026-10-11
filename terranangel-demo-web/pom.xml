@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 保留你的聚合父 pom -->
+    <parent>
+        <groupId>com.terranangel</groupId>
+        <artifactId>terranangel</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>terranangel-demo-web</artifactId>
+
+    <properties>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- gRPC/Protobuf 版本，需与 BOM 一致（BOM 里 grpc-java.version=1.80.0） -->
+        <grpc-java.version>1.80.0</grpc-java.version>
+        <protobuf.version>4.34.2</protobuf.version>
+        <!-- 默认 protoc 平台分类（会被下方的 profile 按系统自动覆盖） -->
+        <os.detected.classifier>windows-x86_64</os.detected.classifier>
+    </properties>
+
+    <!-- 版本管理：让 Spring Boot / Spring Cloud 的版本号自动生效，不用一个个写 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>4.1.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring Cloud 微服务生态（OpenFeign 属于其中） -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2025.1.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring Cloud Alibaba（Nacos 注册中心属于其中） -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>2025.1.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <!-- 共享 api 模块：DTO + Feign 接口 -->
+        <dependency>
+            <groupId>com.terranangel</groupId>
+            <artifactId>terranangel-demo-api</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 测试依赖：JUnit5 + AssertJ + Mockito 等，仅测试用 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- gRPC：Spring Boot 官方支持，配了 terranangel.grpc.enabled 才启用 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-grpc-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-grpc-client</artifactId>
+        </dependency>
+        <!-- OpenFeign：Spring Cloud 声明式 HTTP 客户端，Java 接口自动代理 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <!-- 负载均衡：OpenFeign 通过服务名走注册中心时，需要它去注册中心找实例 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+        <!-- 注册中心：Consul（Spring Cloud 官方） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+        </dependency>
+        <!-- Actuator：提供 /actuator/health 健康检查接口（Consul 健康检查需要） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Kafka：Spring 官方消息队列，配了 terranangel.kafka.enabled 才启用 -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <!-- MyBatis-Plus：Spring Boot 4 专用 starter（支持 4.0.x，4.1.0 需验证） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+            <version>3.5.17</version>
+        </dependency>
+        <!-- MyBatis-Plus 分页插件（依赖 jsqlparser） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>3.5.17</version>
+        </dependency>
+        <!-- Spring Data JPA：Spring 官方，接口即 DAO，100% 兼容 4.1.0 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <!-- JDBC：DataSource 事务基础 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动（版本由 BOM 管理） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+        <!-- MySQL 驱动（版本由 BOM 管理；配 terranangel.datasource.type=mysql 时生效） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+        <!-- Spring Cache：缓存抽象，统一注解 @Cacheable/@CachePut/@CacheEvict -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <!-- Redis 缓存（分布式，微服务主缓存，用 Lettuce 客户端） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Caffeine：本地缓存（咖啡因，高性能，单机/二级缓存场景） -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+        <!-- Jackson：GenericJackson2JsonRedisSerializer 依赖它做 JSON 序列化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- Elasticsearch：Spring Data ES，@Document + Repository 接口，用法和 JPA 一致 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <extensions>
+            <!-- 检测操作系统，protoc 编译需要（protoc 是平台相关可执行文件） -->
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+        <plugins>
+            <!-- 开启 -parameters，让 Spring 反射能拿到方法参数名（@PathVariable/@RequestParam 需要） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>4.1.0</version>
+            </plugin>
+            <!-- 编译 src/main/proto 下的 .proto 生成 Java 代码 + gRPC stub -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc-java.version}:exe:${os.detected.classifier}</pluginArtifact>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>compile-custom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- 跨平台：按操作系统自动选择 protoc 可执行文件分类，Windows/Linux 都能打包 -->
+    <profiles>
+        <profile>
+            <id>windows-x86_64</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                </os>
+            </activation>
+            <properties>
+                <os.detected.classifier>windows-x86_64</os.detected.classifier>
+            </properties>
+        </profile>
+        <profile>
+            <id>linux-x86_64</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <os.detected.classifier>linux-x86_64</os.detected.classifier>
+            </properties>
+        </profile>
+    </profiles>
+</project>

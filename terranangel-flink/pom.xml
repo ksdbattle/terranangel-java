@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.terranangel</groupId>
+        <artifactId>terranangel</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>terranangel-flink</artifactId>
+
+    <properties>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Flink 版本（用较新稳定版） -->
+        <flink.version>1.19.1</flink.version>
+    </properties>
+
+    <dependencies>
+        <!-- ===== Flink 核心（provided：运行时由 Flink 集群提供，不与 Spring Boot 冲突） ===== -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ===== Flink + Kafka 连接器（读 Kafka 数据源） =====
+             Flink 1.19 对应 connector 版本是 3.2.0-1.19（connector 独立版本线） -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka</artifactId>
+            <version>3.2.0-1.19</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ===== 本地运行时（开发调试时用，提交到集群时排除） ===== -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime</artifactId>
+            <version>${flink.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ===== JUnit 5 测试（本地跑 Flink 作业用） ===== -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- JUnit Platform Launcher：IDEA 右键 Run 测试必须，否则报"无法解析 junit-platform-launcher" -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>1.11.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ===== logback：解决 SLF4J 无绑定警告 =====
+             注意：Flink 1.19.1 用的是 slf4j-api 1.7.36（StaticLoggerBinder 绑定机制），
+             所以必须用 logback 1.2.x（最后支持 slf4j 1.7 的版本），
+             不能用 logback 1.5.x（那是给 slf4j-api 2.x 用的，会绑定失败回退 NOP 无日志）。 -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.13</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 编译器插件：显式 UTF-8 编译，解决 javac 编译警告（deprecation 提示）中文乱码 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>25</source>
+                    <target>25</target>
+                    <encoding>UTF-8</encoding>
+                    <!-- 关闭 fork，javac 跑在 Maven 同一个 JVM，不再拉起独立 javac.exe，
+                         这样 javac 输出编码跟随 Maven 进程的 file.encoding（由 .mvn/jvm.config 设为 UTF-8） -->
+                    <fork>false</fork>
+                </configuration>
+            </plugin>
+            <!-- 打包插件：将依赖打包成可提交到 Flink 集群的 jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.apache.flink:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 测试插件：设置 UTF-8 编码，解决控制台中文乱码 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <!--
+                        用 argLine 传编码参数（Maven 官方推荐方式）：
+                        -Dfile.encoding 必须通过 argLine 传给 fork 的测试 JVM，
+                        不能用 systemPropertyVariables（Maven 3.9 会拒绝：file.encoding cannot be set as system property）。
+                        stdout/stderr.encoding 为 Java 18+ 的控制台输出专用编码。
+                    -->
+                    <argLine>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

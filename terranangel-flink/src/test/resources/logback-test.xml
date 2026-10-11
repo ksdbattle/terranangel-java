@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--
+        本地跑 Flink 作业时的日志配置（logback-test.xml 优先级高于 logback.xml，仅在 test 生效）。
+        【作用】
+        1. 修复 SLF4J 绑定：logback-classic 1.2.x 与 Flink 的 slf4j-api 1.7.x 正常绑定，日志能输出。
+        2. 解决中文乱码：ConsoleAppender 指定 <charset>UTF-8</charset>，控制台日志按 UTF-8 输出。
+        3. 调低 Flink 内部日志级别，避免刷屏，只看自己的业务日志。
+    -->
+
+    <!-- 控制台输出：UTF-8 编码，解决中文乱码 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 自己的代码用 INFO，Flink 内部日志压到 WARN 防刷屏 -->
+    <logger name="com.terranangel.flink" level="INFO"/>
+    <logger name="org.apache.flink" level="WARN"/>
+    <logger name="org.apache.pekko" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
