@@ -29,7 +29,7 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # 只把构建产物里的可执行 jar 拿过来（*.jar.original 不会被匹配）
-COPY --from=build /build/terranangel-demo-web/target/*.jar app.jar
+COPY --from=build /build/terranangel-demo-web/target/*.jar terranangel-web.jar
 
 # 时区，保证日志时间正确
 ENV TZ=Asia/Shanghai
@@ -40,4 +40,6 @@ ENV TZ=Asia/Shanghai
 # 端口交给 application.yml 决定：有 PORT 用 PORT，没有用 8080。
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+# 注意路径：COPY 的目标是相对 WORKDIR(/app) 的，
+# 所以 jar 实际位于 /app/terranangel-web.jar，这里必须写全（不能只写 /terranangel-web.jar）
+ENTRYPOINT ["java", "-jar", "/app/terranangel-web.jar"]
