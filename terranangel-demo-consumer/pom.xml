@@ -88,10 +88,21 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
+            <!--
+                打成可执行 fat jar 的 repackage。
+                没用 spring-boot-starter-parent，必须显式声明 execution，否则不会执行。
+            -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>4.1.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

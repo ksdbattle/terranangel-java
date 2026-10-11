@@ -182,10 +182,23 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
+            <!--
+                打成可执行 fat jar 的 repackage。
+                本项目没用 spring-boot-starter-parent，拿不到它在 pluginManagement 里
+                预置的 execution 绑定，必须在这里显式声明；否则 repackage 不执行，
+                产出的只是普通 thin jar，运行时报 "no main manifest attribute"。
+            -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>4.1.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- 编译 src/main/proto 下的 .proto 生成 Java 代码 + gRPC stub -->
             <plugin>
