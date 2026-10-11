@@ -1,0 +1,20 @@
+# 构建产物：容器内会重新编译，不需要传进去
+**/target/
+
+# 版本控制
+.git/
+.gitignore
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Maven Wrapper（本项目未使用，且为空目录）
+.mvn/
+
+# 本地脚本
+run-flink-compile.cmd
+run-flink-test.cmd
