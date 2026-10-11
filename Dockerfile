@@ -34,8 +34,10 @@ COPY --from=build /build/terranangel-demo-web/target/*.jar app.jar
 # 时区，保证日志时间正确
 ENV TZ=Asia/Shanghai
 
-# 服务端口。部署平台若要求监听它分配的端口，把平台的 PORT 值写到 SERVER_PORT 即可
-ENV SERVER_PORT=8080
+# 服务端口不在这里写死！
+# Spring Boot 的配置优先级是「环境变量 > application.yml」，
+# 一旦这里设了 ENV SERVER_PORT，就会覆盖掉 yml 里的 server.port=${PORT:8080}。
+# 端口交给 application.yml 决定：有 PORT 用 PORT，没有用 8080。
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "/app.jar"]

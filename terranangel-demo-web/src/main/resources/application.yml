@@ -1,5 +1,12 @@
 # TerranAngel 示例配置——默认是"最简启动"。
 
+# ===== 服务端口 =====
+# 优先使用环境变量 PORT（Render 等云平台会注入，默认值 10000），
+# 本地没有 PORT 时回落到 8080。
+# 绑定 0.0.0.0 是 Spring Boot 默认行为，无需额外配置。
+server:
+  port: ${PORT:8080}
+
 # ===== 能力开关（terranangel 前缀）=====
 # 配了 enabled: true 才启用对应能力，没配则完全不初始化，Spring 照常启动。
 terranangel:
