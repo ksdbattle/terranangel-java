@@ -34,6 +34,12 @@ COPY --from=build /build/terranangel-demo-web/target/*.jar terranangel-web.jar
 # 时区，保证日志时间正确
 ENV TZ=Asia/Shanghai
 
+# JVM 堆上限：容器内存只有 512MB 时，JVM 默认把堆限制在 25%（128MB），
+# Spring Boot + Spring Cloud + Hibernate 起来很容易频繁 Full GC 甚至被 OOM 杀掉。
+# 提到 70%（约 360MB），剩下的留给 metaspace / 线程栈 / 堆外内存。
+# 注意：在 Render 控制台单独设 JAVA_TOOL_OPTIONS 会覆盖这里的值，不冲突。
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70"
+
 # 服务端口不在这里写死！
 # Spring Boot 的配置优先级是「环境变量 > application.yml」，
 # 一旦这里设了 ENV SERVER_PORT，就会覆盖掉 yml 里的 server.port=${PORT:8080}。

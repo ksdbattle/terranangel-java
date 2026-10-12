@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -69,6 +70,24 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
         log.warn("参数校验失败: {}", message);
         return build(HttpStatus.BAD_REQUEST, message);
+    }
+
+    /**
+     * 静态资源不存在（典型场景：浏览器自动请求 /favicon.ico）。
+     * <p>
+     * 【为什么必须单独处理】
+     * NoResourceFoundException 继承的是 ErrorResponseException，不是
+     * ResponseStatusException，所以不会命中上面那个处理器，而是掉进下面的兜底，
+     * 变成 500「系统繁忙」。这有两处不对：
+     *   1. 语义错了——客户端要了一个不存在的东西，正确答案是 404；
+     *   2. 噪音——每个浏览器标签、每个页面都会请求 favicon，
+     *      用 error + 完整堆栈记录会把日志刷到没法看。
+     * 所以这里返回 404，并且只在 DEBUG 级别记一行（生产日志不再出现）。
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(NoResourceFoundException e) {
+        log.debug("静态资源不存在: {}", e.getResourcePath());
+        return build(HttpStatus.NOT_FOUND, "静态资源不存在: " + e.getResourcePath());
     }
 
     /**

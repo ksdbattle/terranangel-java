@@ -52,7 +52,8 @@ terranangel:
       # 临时明文，仅为本地联调；测试完请改成环境变量并轮换密码
       password: gh1ki6yapDYGnJIM
       max-pool-size: 10
-      generate-ddl: true  # 自动建表（演示用，生产建议关）
+      generate-ddl: false # 关掉启动期的 schema 比对/DDL 执行：线上库的表结构不归应用管，
+                          # 而且这一步每次启动都要连库读元数据，是冷启动慢的一大块
     # MyBatis-Plus → MySQL
     mysql:
       enabled: false       # true 才启用
