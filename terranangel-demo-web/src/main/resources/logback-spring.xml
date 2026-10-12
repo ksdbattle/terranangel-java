@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  日志配置。
+
+  关键点：%X{traceId} 会输出 TraceIdFilter 放进 MDC 的链路 ID，
+  这样一条请求的所有日志都会带上同一个标识，排查问题时可以按它过滤。
+  没有 traceId 时（如启动阶段）显示 "-"。
+-->
+<configuration>
+
+    <property name="LOG_PATTERN"
+              value="%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] [%thread] %logger{36} - %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!-- 框架内部日志太吵，压到 WARN；需要看细节时临时调成 DEBUG -->
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.springframework.web" level="INFO"/>
+
+</configuration>

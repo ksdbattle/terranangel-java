@@ -1,5 +1,6 @@
 package com.terranangel.db.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -30,7 +31,15 @@ public class Order {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    /** 所属用户（外键，多方维护关联） */
+    /**
+     * 所属用户（外键，多方维护关联）。
+     * <p>
+     * 【为什么加 @JsonIgnore】User.orders 和 Order.user 是双向关联，
+     * 序列化时会互相引用形成死循环；而且这里是 LAZY 代理，
+     * 请求结束后会话已关闭，访问它会抛 LazyInitializationException。
+     * 对外返回 JSON 时只需要"订单 → 用户"以外的信息，所以这里直接忽略。
+     */
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

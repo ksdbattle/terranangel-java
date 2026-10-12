@@ -26,11 +26,12 @@ class FlinkJobTest {
         System.out.println("========== 开始本地运行 Flink 窗口统计作业 ==========");
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        // 假数据源：只发 5 条点击事件，然后结束（作业自动停止）
-        env.addSource(new FiniteClickSource());
+        // 本地调试：并行度设为 1，窗口/水印输出更直观（入口 JobLauncher 不设，走默认）
+        env.setParallelism(1);
 
-        // 复用窗口统计作业的逻辑，但数据源用上面有限的
-        com.terranangel.flink.jobs.WindowCountJob.execute(env);
+        // 假数据源：只发 5 条点击事件，然后结束（作业自动停止）
+        // 注意：用 build(...) 复用算子逻辑，不要用 execute(env)——后者内部会再建一条无限数据源
+        com.terranangel.flink.jobs.WindowCountJob.build(env.addSource(new FiniteClickSource()));
 
         env.execute("WindowCountJob-Local-Test");
         System.out.println("========== Flink 窗口作业运行完成 ==========");

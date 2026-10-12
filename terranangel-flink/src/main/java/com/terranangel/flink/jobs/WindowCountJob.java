@@ -30,7 +30,17 @@ public class WindowCountJob {
     public static void execute(StreamExecutionEnvironment env) throws Exception {
         // ===== 1. 数据源：真实用 Kafka Source，这里用假数据源（演示方便）=====
         DataStream<String> source = env.addSource(FakeEventSource.create());
+        build(source);
+        System.out.println("[Flink] 窗口统计作业已启动，观察滚动窗口和滑动窗口的输出...");
+    }
 
+    /**
+     * 纯算子逻辑：接收一条已建好的字符串流，搭建窗口统计管线。
+     * <p>
+     * 单独暴露出来，是为了让本地测试能复用「有限数据源」——
+     * 避免测试里 addSource 之后，本方法内部又 addSource 造成两个数据源。
+     */
+    public static void build(DataStream<String> source) {
         // ===== 2. 解析字符串 → UserEvent，并按事件时间 + 水印处理乱序 =====
         // Watermark：允许事件迟到 5 秒（晚到的数据如果在水印内，仍被计入窗口）
         DataStream<com.terranangel.flink.model.UserEvent> events = source
@@ -84,7 +94,5 @@ public class WindowCountJob {
                         org.apache.flink.api.common.typeinfo.Types.INT))
                 .map(t -> "【滑动窗口-每30秒看近60秒】用户" + t.f0 + " 点击量: " + t.f1)
                 .print();
-
-        System.out.println("[Flink] 窗口统计作业已启动，观察滚动窗口和滑动窗口的输出...");
     }
 }
