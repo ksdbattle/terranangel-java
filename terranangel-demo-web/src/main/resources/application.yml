@@ -33,13 +33,22 @@ terranangel:
   # 两个数据源完全独立，各配一套，可以同时开启。
   # 业务上没有交集，所以不存在跨库事务问题。
   datasource:
-    # JPA（Hibernate）→ PostgreSQL（当前指向 Supabase 线上库）
+    # JPA（Hibernate）→ PostgreSQL（当前指向 Supabase 线上库，经 Session Pooler 连接）
     # 注意：库名固定用 postgres，表建在它的 public schema —— Supabase 后台只认这个库，
     # 只有这样 Dashboard → Table Editor 里才看得到表。
     postgres:
       enabled: true        # true 才启用
-      url: jdbc:postgresql://db.vqcqxxcbxcwtcdhgnwup.supabase.co:5432/postgres?sslmode=require
-      username: postgres
+      # 【为什么用 Pooler 而不是直连】
+      # 直连域名 db.<ref>.supabase.co 现在只有 IPv6（IPv4 要额外付费买 add-on），
+      # Render 这类只有 IPv4 出站的平台连不上；
+      # pooler 域名 aws-0-<region>.pooler.supabase.com 是 IPv4，且免费。
+      # 端口固定用 5432（Session 模式），支持 prepared statement；
+      # 不要改成事务模式 6543 —— Hibernate 用 prepared statement，会直接报错。
+      url: jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+      # 【用户名必须带 .<project-ref> 后缀】
+      # pooler 是共享的（同一个 host 服务该 region 下所有项目），Supavisor 靠这个后缀
+      # 把连接路由到对应项目；写成裸 postgres 会认证失败。
+      username: postgres.vqcqxxcbxcwtcdhgnwup
       # 临时明文，仅为本地联调；测试完请改成环境变量并轮换密码
       password: gh1ki6yapDYGnJIM
       max-pool-size: 10
